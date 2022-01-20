@@ -1,0 +1,6 @@
+//Version: 1.0.4 
+let howatchlist = (_GetWatchlist('HoneyAccounts') 
+| project HoneyAccount); 
+SigninLogs 
+| project TimeGenerated, IPAddress, Location, AppDisplayName, UserPrincipalName, ResultType, ResultDescription 
+| where UserPrincipalName in (howatchlist) and ResultType <> '0'

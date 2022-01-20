@@ -1,0 +1,18 @@
+//Version: 1.0.3 
+let rgwatchlist = (_GetWatchlist('AADRolesAndGroups') 
+| project ID); AuditLogs 
+| where Category == 'GroupManagement' or Category == 'RoleManagement' 
+| where OperationName == 'Add member to group' or OperationName == 'Add member to role' or OperationName == 'Remove member from role' or OperationName == 'Remove member from group' 
+| extend roleid1 = iif(OperationName == 'Add member to role', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[2].newValue))), '') 
+| extend roleid2 = iif(OperationName == 'Remove member from role', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[2].oldValue))), '') 
+| extend groupid1 = iif(OperationName == 'Add member to group', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[0].newValue))), '') 
+| extend groupid2 = iif(OperationName == 'Remove member from group', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[0].oldValue))), '') 
+| extend GroupOrRoleId=coalesce(roleid1, roleid2, groupid1, groupid2) 
+| extend role_groupname_added = iif(OperationName contains 'Add member', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[1].newValue))), '') 
+| extend role_groupname_removed = iif(OperationName contains 'Remove member', tostring(parse_json(tostring(parse_json(tostring(TargetResources[0].modifiedProperties))[1].oldValue))), '') 
+| extend GroupOrRoleName=coalesce(role_groupname_added, role_groupname_removed) 
+| extend UserPrincipalName = tostring(TargetResources[0].userPrincipalName) 
+| extend initiatedby = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName) 
+| extend type = tostring(TargetResources[0].type) 
+| where GroupOrRoleId in (rgwatchlist) 
+| project TimeGenerated, GroupOrRoleName, GroupOrRoleId, OperationName, UserPrincipalName, initiatedby, type

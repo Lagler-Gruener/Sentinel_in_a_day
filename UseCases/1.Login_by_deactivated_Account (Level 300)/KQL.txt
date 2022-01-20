@@ -1,0 +1,24 @@
+//Version: 1.2.0
+let failedLoginAttemptsThreshold = 5;
+let lookBackTimeRange = ago(8d);
+let aadFunc = (tableName: string) {
+    table(tableName)
+    | where TimeGenerated > lookBackTimeRange
+    | where ResultType == '50057'
+    | where ResultDescription == 'User account is disabled. The account has been disabled by an administrator.'
+    | lookup kind=leftouter _GetWatchlist('AcceptedAccounts') on UserPrincipalName, $left.UserPrincipalName == $right.SearchKey
+    | where not(gettype(AcceptUntil) == 'datetime' and AcceptUntil > now())
+    | summarize count() by bin(TimeGenerated, 1d), UserPrincipalName, Type
+};
+let aadSignin = aadFunc('SigninLogs');
+let aadNonInt = aadFunc('AADNonInteractiveUserSignInLogs');
+let deactivatedAccountsList = union isfuzzy=true aadSignin, aadNonInt
+    | summarize typeSet = makeset(Type), sumFailedLoginAttempts = sum(count_) by UserPrincipalName, TimeGenerated
+    | where sumFailedLoginAttempts >= failedLoginAttemptsThreshold
+    | summarize count() by UserPrincipalName
+    | where count_ >= 7
+    | project UserPrincipalName;
+AuditLogs | where OperationName =~ \"Disable account\"
+| where tostring(TargetResources[0].userPrincipalName) in~ (deactivatedAccountsList)
+| project DeactivatedTimeStamp = TimeGenerated, UserPrincipalName = TargetResources[0].userPrincipalName
+| order by DeactivatedTimeStamp

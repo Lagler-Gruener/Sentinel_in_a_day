@@ -1,0 +1,26 @@
+//Version: 1.0.6
+AuditLogs
+| where Category == 'Policy'
+| where OperationName contains 'Update conditional'
+    or OperationName contains 'Add conditional'
+    or OperationName contains 'Delete conditional'
+| where TargetResources[0].displayName <> 'Default Policy'
+| extend id = tostring(TargetResources[0].id)
+| extend policyname = tostring(TargetResources[0].displayName)
+| project TimeGenerated, policyname, id, OperationName, TargetResources[0].modifiedProperties
+| join 
+    (AuditLogs | 
+	where OperationName contains 'Update policy'
+	or OperationName contains 'Add policy'
+        or OperationName contains 'Delete policy' 
+    | where TargetResources[0].displayName <> 'Default Policy' 
+    | extend id = tostring(TargetResources[0].id)   
+    | extend initiatedby = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)
+    | extend policyname = tostring(TargetResources[0].displayName)
+    | order by TimeGenerated
+    | project TimeGenerated, policyname, id, initiatedby, OperationName) 
+    on id 
+| order by TimeGenerated
+| extend oldValue=todynamic(TargetResources_0_modifiedProperties[0].oldValue)
+| extend newValue=todynamic(TargetResources_0_modifiedProperties[0].newValue)
+| project TimeGenerated=TimeGenerated1, Policy=policyname, PolicyId=id, OperationName=OperationName1, InitiatedBy=initiatedby, oldValue, newValue

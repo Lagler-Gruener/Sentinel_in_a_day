@@ -1,0 +1,23 @@
+Type,Name,ID
+AADRole,Application administrator,9b895d92-2cd3-44c7-9d02-a6ac2d5ea5c3
+AADRole,Authentication administrator,c4e39bd9-1100-46d3-8c65-fb160da0071f
+AADRole,Azure Information Protection administrator,7495fdc4-34c4-4d15-a289-98788ce399fd
+AADRole,Cloud App Security Administrator,892c5842-a9a6-463a-8041-72aa08ca3cf6
+AADRole,Conditional Access administrator,b1be1c3e-b65d-4f19-8427-f6fa0d97feb9
+AADRole,Dynamics 365 administrator,44367163-eba1-44c3-98af-f5787879f96a
+AADRole,Exchange administrator,29232cdf-9323-42fd-ade2-1d097af3e4de
+AADRole,Global administrator,62e90394-69f5-4237-9190-012177145e10
+AADRole,Groups administrator,fdd7a751-b60b-444a-984c-02652fe8fa1c
+AADRole,Helpdesk administrator,729827e3-9c14-49f7-bb1b-9608f156bbb8
+AADRole,Intune administrator,3a2c62db-5318-420d-8d74-23affee5d9d5
+AADRole,Privileged role administrator,e8611ab8-c189-46e8-94e1-60213ab1f814
+AADRole,Teams administrator,69091246-20e8-4a56-aa4d-066075b2a7a8
+AADRole,User administrator,fe930be7-5e62-47db-91af-98c3a49a38b1
+AADRole,Security Administrator,194ae4cb-b126-40b2-bd5b-6091b380977d
+AADRole,Global Reader,f2ef992c-3afb-46b9-b7cf-a126ee74c451
+AADGroup,Azure-AAD-GlobalReader-GG,7a14e552-f0e4-4cad-bd2b-02cd7dc9e222
+AADGroup,Azure-Sentinel-Contributor-GG,4f61a594-7e3e-45cd-9223-24a429da374a
+AADGroup,Azure-Sentinel-LogicAppContributor-GG,4ee8879d-ed18-42b6-83ee-7759af429d96
+AADGroup,Azure-Sentinel-Reader-GG,e0615897-6149-46fa-9084-4f46fb57c657
+AADGroup,Azure-Sentinel-Responder,4dc46f46-a69b-4b46-bea3-f9fac3e51392
+AADGroup,Azure-Sentinel-Responder-GG,86a2619a-4cbc-4a20-a6b3-a09f6a2fc3a7

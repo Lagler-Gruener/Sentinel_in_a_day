@@ -1,0 +1,73 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {   
+		"Rulename": {
+		  "type": "String",
+		  "defaultValue": "UC01-004-Analytics-Aad-Deactivatedaccountlogin"
+		},
+		"workspacename": {
+		  "type": "String",
+		  "allowedValues": [
+			"Loga-Sentinel-Prod",
+			"Loga-Sentinel-Dev09"
+		  ],
+		  "defaultValue": "Loga-Sentinel-Dev09"
+		}
+	},
+    "resources": [
+        {
+			"name": "[concat(parameters('workspacename'),'/Microsoft.SecurityInsights/',parameters('Rulename'))]",
+            "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+            "location": "[resourceGroup().location]",
+			"kind": "Scheduled",
+            "apiVersion": "2021-09-01-preview",
+            "properties": {
+                "displayName": "[parameters('Rulename')]",
+                "description": "That rule detects login attempts with a deactivated account. It throws only alerts, if the attempts are more than the configured threshold!\n\nVersion: 1.2.0",
+                "severity": "Medium",
+                "enabled": true,
+                "query": "//Version: 1.2.0 \r\nlet failedLoginAttemptsThreshold = 5;\r\nlet lookBackTimeRange = ago(8d);\r\nlet aadFunc = (tableName: string) {\r\n    table(tableName)\r\n    | where TimeGenerated > lookBackTimeRange\r\n    | where ResultType == '50057'\r\n    | where ResultDescription == 'User account is disabled. The account has been disabled by an administrator.'\r\n    | lookup kind=leftouter _GetWatchlist('AcceptedAccounts') on UserPrincipalName, $left.UserPrincipalName == $right.SearchKey\r\n    | where not(gettype(AcceptUntil) == 'datetime' and AcceptUntil > now())\r\n    | summarize count() by bin(TimeGenerated, 1d), UserPrincipalName, Type\r\n};\r\nlet aadSignin = aadFunc('SigninLogs');\r\nlet aadNonInt = aadFunc('AADNonInteractiveUserSignInLogs');\r\nlet deactivatedAccountsList = union isfuzzy=true aadSignin, aadNonInt\r\n    | summarize typeSet = makeset(Type), sumFailedLoginAttempts = sum(count_) by UserPrincipalName, TimeGenerated\r\n    | where sumFailedLoginAttempts >= failedLoginAttemptsThreshold\r\n    | summarize count() by UserPrincipalName\r\n    | where count_ >= 7\r\n    | project UserPrincipalName;\r\nAuditLogs\r\n| where OperationName =~ \"Disable account\"\r\n| where tostring(TargetResources[0].userPrincipalName) in~ (deactivatedAccountsList)\r\n| project DeactivatedTimeStamp = TimeGenerated, UserPrincipalName = TargetResources[0].userPrincipalName\r\n| order by DeactivatedTimeStamp",
+                "queryFrequency": "P1D",
+                "queryPeriod": "P14D",
+                "triggerOperator": "GreaterThan",
+                "triggerThreshold": 0,
+                "suppressionDuration": "PT1H",
+                "suppressionEnabled": false,
+                "tactics": [
+                    "Persistence",
+                    "DefenseEvasion",
+                    "CredentialAccess"
+                ],
+                "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                        "enabled": false,
+                        "reopenClosedIncident": false,
+                        "lookbackDuration": "PT5M",
+                        "matchingMethod": "AllEntities",
+                        "groupByEntities": [],
+                        "groupByAlertDetails": [],
+                        "groupByCustomDetails": []
+                    }
+                },
+                "eventGroupingSettings": {
+                    "aggregationKind": "SingleAlert"
+                },
+                "alertDetailsOverride": null,
+                "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "UserPrincipalName"
+                            }
+                        ]
+                    }
+                ]
+            }
+        }
+    ]
+}

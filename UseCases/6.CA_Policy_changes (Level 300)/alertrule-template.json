@@ -1,0 +1,107 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Rulename": {
+      "type": "String",
+      "defaultValue": "UC01-006-Analytics-Aad-Conditionalaccesspolicychanges"
+    },
+    "workspacename": {
+      "type": "String",
+      "allowedValues": [
+        "Loga-Sentinel-Prod",
+        "Loga-Sentinel-Dev09"
+      ],
+      "defaultValue": "Loga-Sentinel-Dev09"
+    }
+  },
+  "resources": [
+      {
+		  "name": "[concat(parameters('workspacename'),'/Microsoft.SecurityInsights/',parameters('Rulename'))]",
+          "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+		  "kind": "Scheduled",
+          "apiVersion": "2021-09-01-preview",
+          "location": "[resourceGroup().location]",
+          "properties": {
+			  "displayName": "[parameters('Rulename')]",
+              "description": "That rule detects any changes on conditional access policies in azure ad.\n\nVersion: 1.0.6",
+              "severity": "Low",
+              "enabled": true,
+              "query": "//Version: 1.0.6\r\nAuditLogs\r\n| where Category == 'Policy'\r\n| where OperationName contains 'Update conditional'\r\n    or OperationName contains 'Add conditional'\r\n    or OperationName contains 'Delete conditional'\r\n| where TargetResources[0].displayName <> 'Default Policy'\r\n| extend id = tostring(TargetResources[0].id)\r\n| extend policyname = tostring(TargetResources[0].displayName)\r\n| project TimeGenerated, policyname, id, OperationName, TargetResources[0].modifiedProperties\r\n| join \r\n    (AuditLogs  \r\n    | where OperationName contains 'Update policy'\r\n    or OperationName contains 'Add policy'\r\n    or OperationName contains 'Delete policy' \r\n    | where TargetResources[0].displayName <> 'Default Policy' \r\n    | extend id = tostring(TargetResources[0].id)   \r\n    | extend initiatedby = tostring(parse_json(tostring(InitiatedBy.user)).userPrincipalName)\r\n    | extend policyname = tostring(TargetResources[0].displayName)\r\n    | order by TimeGenerated\r\n    | project TimeGenerated, policyname, id, initiatedby, OperationName) \r\n    on id\r\n| order by TimeGenerated\r\n| extend oldValue=todynamic(TargetResources_0_modifiedProperties[0].oldValue)\r\n| extend newValue=todynamic(TargetResources_0_modifiedProperties[0].newValue)\r\n| project TimeGenerated=TimeGenerated1, Policy=policyname, PolicyId=id, OperationName=OperationName1, InitiatedBy=initiatedby, oldValue, newValue",
+              "queryFrequency": "PT15M",
+              "queryPeriod": "PT15M",
+              "triggerOperator": "GreaterThan",
+              "triggerThreshold": 0,              
+              "suppressionDuration": "PT1H",
+              "suppressionEnabled": false,
+              "tactics": [
+                  "CommandandControl"
+              ],
+			  "incidentConfiguration": {
+                    "createIncident": true,
+                    "groupingConfiguration": {
+                    "enabled": true,
+                    "reopenClosedIncident": false,
+                    "lookbackDuration": "PT15M",
+                    "matchingMethod": "AnyAlert",
+                    "groupByEntities": [],
+                    "groupByAlertDetails": [],
+                    "groupByCustomDetails": []
+                    }
+                },
+              "eventGroupingSettings": {
+                    "aggregationKind": "AlertPerResult"
+                },
+              "alertDetailsOverride": null,
+              "customDetails": null,
+                "entityMappings": [
+                    {
+                        "entityType": "Account",
+                        "fieldMappings": [
+                            {
+                                "identifier": "FullName",
+                                "columnName": "InitiatedBy"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "Policy"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "OperationName"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "newValue"
+                            }
+                        ]
+                    },
+                    {
+                        "entityType": "URL",
+                        "fieldMappings": [
+                            {
+                                "identifier": "Url",
+                                "columnName": "oldValue"
+                            }
+                        ]
+                    }
+                ]
+          }
+      }
+  ]
+}

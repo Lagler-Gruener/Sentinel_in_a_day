@@ -1,0 +1,81 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "Rulename": {
+      "type": "String",
+      "defaultValue": "UC01-010-Analytics-Aad-Honeyaccountloginsuccessfull"
+    },
+    "workspacename": {
+      "type": "String",
+      "allowedValues": [
+        "Loga-Sentinel-Prod",
+        "Loga-Sentinel-Dev09"
+      ],
+      "defaultValue": "Loga-Sentinel-Dev09"
+    }
+  },
+  "resources": [
+      {
+          "type": "Microsoft.OperationalInsights/workspaces/providers/alertRules",
+          "apiVersion": "2020-01-01",
+          "name": "[concat(parameters('workspacename'),'/Microsoft.SecurityInsights/',parameters('Rulename'))]",
+          "location": "[resourceGroup().location]",
+          "kind": "Scheduled",
+          "properties": {
+              "description": "That rule detects an honey account login based on the watchlist HoneyAccounts.\n\nVersion: 1.0.4",
+              "displayName": "[parameters('Rulename')]",
+              "enabled": true,
+              "query": "//Version: 1.0.4 \r\nlet howatchlist = (_GetWatchlist('HoneyAccounts') | project HoneyAccount); SigninLogs | project TimeGenerated, IPAddress, Location, AppDisplayName, UserPrincipalName, ResultType, ResultDescription | where UserPrincipalName in (howatchlist) and ResultType == '0'",
+              "queryFrequency": "PT15M",
+              "queryPeriod": "PT15M",
+              "severity": "High",
+              "suppressionDuration": "PT1H",
+              "suppressionEnabled": false,
+              "triggerOperator": "GreaterThan",
+              "triggerThreshold": 0,
+              "entityMappings": [
+                  {
+                      "entityType": "Account",
+                      "fieldMappings": [
+                          {
+                              "identifier": "FullName",
+                              "columnName": "UserPrincipalName"
+                          }
+                      ]
+                  },
+                  {
+                      "entityType": "IP",
+                      "fieldMappings": [
+                          {
+                              "identifier": "Address",
+                              "columnName": "IPAddress"
+                          }
+                      ]
+                  },
+                  {
+                      "entityType": "Url",
+                      "fieldMappings": [
+                          {
+                              "identifier": "Url",
+                              "columnName": "Location"
+                          }
+                      ]
+                  },
+                  {
+                      "entityType": "CloudApplication",
+                      "fieldMappings": [
+                          {
+                              "identifier": "Name",
+                              "columnName": "AppDisplayName"
+                          }
+                      ]
+                  }
+              ],
+              "tactics": [
+                  "CredentialAccess"
+              ]
+          }
+      }
+  ]
+}
